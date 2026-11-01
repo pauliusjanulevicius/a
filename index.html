@@ -97,7 +97,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 <div class="view rv" style="--d:.24s">
 <canvas id="c"></canvas>
 <div class="tag">3D modelis</div>
-<div class="hint"><span>Vilkite, kad sukti · du pirštai arba ratukas – artinti</span></div>
+<div class="hint"><span>Vilkite, kad sukti · du pirštai arba ratukas – artinti · bakstelėkite dušo duris</span></div>
 <div id="ld"><div class="spin"></div><span>Ruošiamas 3D modelis</span><div class="bar"><u></u></div></div>
 </div>
 <aside class="panel rv" style="--d:.36s">
@@ -106,6 +106,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 <div class="grp"><label>Plytelių klojimas</label><div class="seg"><button id="o1" aria-pressed="true">Vertikaliai</button><button id="o2" aria-pressed="false">Horizontaliai</button></div></div>
 <div class="grp"><div class="lbl"><span>Apšvietimo ryškumas</span><b id="brv">100 %</b></div><input type="range" id="br" min="30" max="250" value="100" aria-label="Apšvietimo ryškumas"></div>
 <div class="grp"><div class="lbl"><span>Šviesos spalva</span><b id="kvv">4500 K</b></div><div class="kbar"></div><input type="range" id="kv" min="2700" max="6500" step="100" value="4500" aria-label="Šviesos temperatūra"></div>
+<div class="grp"><div class="lbl"><span>Dušo durys</span><b id="drv">0 %</b></div><input type="range" id="dr" min="0" max="100" value="0" aria-label="Dušo durų atvėrimas"></div>
 <p class="note">Grindys visose parinktyse matinės. Kampinė siena su durimis rodoma pjūvyje, durys pažymėtos plokšte.</p>
 </aside>
 </div>
@@ -127,7 +128,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 <h3 class="rv">Erdvės planas</h3>
 <p class="rv" style="--d:.08s">Dviejų patalpų sujungimas į vieną funkcionalią vonią, kurioje telpa dušas, skalbimo zona ir saugykla.</p>
 <div class="zones">
-<div class="zone rv"><small>01</small><h4>Dušo zona</h4><p>1 × 1 m dušo padėklas, dviejų pusių stiklo sienelė ir lietaus dušas.</p></div>
+<div class="zone rv"><small>01</small><h4>Dušo zona</h4><p>1 × 1 m dušo kabina Mexen Lima Duo (sulankstomos durys, 190 cm, sidabro spalvos profiliai) su linijiniu trapu TECE 2in1 su įklijuojama plytele, be dušo padėklo, ir lietaus dušas.</p></div>
 <div class="zone rv" style="--d:.08s"><small>02</small><h4>Praustuvas</h4><p>Pakabinama spintelė su juodu stalviršiu ir apvalus LED veidrodis.</p></div>
 <div class="zone rv" style="--d:.16s"><small>03</small><h4>Saugykla</h4><p>Aukšta spintelė su integruota skalbinių dėže tarp praustuvo ir dušo.</p></div>
 <div class="zone rv"><small>04</small><h4>Tualetas</h4><p>Pakabinamas klozetas su paslėptu bakeliu prie priekinės sienos.</p></div>
@@ -232,6 +233,25 @@ function door(){
  add(.74,2.03,.04,0,1.025,.04,0xf3f2ee,.45);
  add(.12,.02,.04,.29,1.0,.075,0x1a1a1a,.3,.6);
  add(.04,.04,.03,.34,1.0,.06,0x1a1a1a,.3,.6)}
+var CAB=[],DR=[],doorT=0,KD=1.309;
+function sil(){return new THREE.MeshStandardMaterial({color:0xcfd3d9,metalness:.95,roughness:.22,envMap:ENV,envMapIntensity:1.1})}
+function leaf(h){var g=new THREE.Group(),sm=sil();
+ var gl=new THREE.Mesh(new THREE.PlaneGeometry(.5,1.86),new THREE.MeshPhysicalMaterial({color:0xcfe0e8,transparent:true,opacity:.16,roughness:.05,side:THREE.DoubleSide,depthWrite:false}));
+ gl.position.set(.25,.95,0);g.add(gl);CAB.push(gl);
+ [[.5,.02,.025,.25,1.9,0],[.5,.03,.025,.25,.015,0],[.02,1.9,.025,0,.95,0],[.02,1.9,.025,.5,.95,0]].forEach(function(p){var m=new THREE.Mesh(new THREE.BoxGeometry(p[0],p[1],p[2]),sm);m.position.set(p[3],p[4],p[5]);m.castShadow=true;g.add(m)});
+ if(h){var hd=new THREE.Mesh(new THREE.BoxGeometry(.016,.3,.016),sm);hd.position.set(.43,.95,.03);g.add(hd)}
+ return g}
+function cabin(){
+ [[1.51,.005,-Math.PI/2,1],[2.505,1.0,Math.PI,-1]].forEach(function(c){
+  var pA=new THREE.Group();pA.position.set(c[0],0,c[1]);pA.rotation.y=c[2];S.add(pA);pA.add(leaf(false));
+  var pB=new THREE.Group();pB.position.set(.5,0,0);pA.add(pB);pB.add(leaf(true));
+  DR.push({pA:pA,pB:pB,base:c[2],s:c[3]})});
+ setDoor(doorT)}
+function setDoor(t){doorT=t;DR.forEach(function(d){d.pA.rotation.y=d.base+d.s*t*KD;d.pB.rotation.y=-2*d.s*t*KD})}
+function tweenDoor(to){var from=doorT,t0=performance.now();(function f(now){var k=Math.min(1,(now-t0)/900),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;setDoor(from+(to-from)*e);var v=Math.round(doorT*100);document.getElementById('dr').value=v;document.getElementById('drv').textContent=v+' %';draw();if(k<1)requestAnimationFrame(f)})(t0)}
+var dX=0,dY=0,RC=new THREE.Raycaster();
+cv.addEventListener('pointerdown',function(e){dX=e.clientX;dY=e.clientY});
+cv.addEventListener('click',function(e){if(Math.hypot(e.clientX-dX,e.clientY-dY)>6)return;var r=cv.getBoundingClientRect();RC.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1),cam);if(RC.intersectObjects(CAB).length)tweenDoor(doorT>.5?0:1)});
 function build(){
  ENV=envMap();
  mkMat.g=mats(true);mkMat.m=mats(false);var fl=mats(false);mkMat.f=function(i,r){return fl(i,r)};
@@ -240,13 +260,13 @@ function build(){
  var cg=new THREE.Mesh(shapeGeo(),new THREE.MeshStandardMaterial({color:0xf4f3ef,roughness:.9,side:THREE.BackSide}));cg.position.y=H;S.add(cg);
  door();
  var K=0x5a3d2c,BL=0x111111,WH=0xf3f2ee;
- box(1,.04,1,2.01,.02,.5,0xf4f3ef,.3);cyl(.045,.012,2.01,.043,.5,BL);
+ box(.8,.004,.07,2.01,.004,.045,0xb9b7b0,.75);box(.8,.005,.01,2.01,.0055,.075,0x222222,.4,.5);
  cyl(.014,.38,2.01,2.05,.2,BL,0,Math.PI/2);cyl(.12,.014,2.01,2.05,.39,BL);
  box(.22,.1,.03,2.01,1.15,.016,BL,.3,.5);cyl(.012,.8,2.3,1.35,.02,BL);
  var gm=new THREE.MeshPhysicalMaterial({color:0xcfe0e8,transparent:true,opacity:.16,roughness:.05,side:THREE.DoubleSide,depthWrite:false});
- var g1=new THREE.Mesh(new THREE.PlaneGeometry(1,2),gm);g1.rotation.y=Math.PI/2;g1.position.set(1.51,1,.5);S.add(g1);
- var g2=new THREE.Mesh(new THREE.PlaneGeometry(1,2),gm);g2.position.set(2.01,1,1);S.add(g2);
- box(.02,.02,1,1.51,2,.5,BL);box(.02,2,.02,1.51,1,1);box(1,.02,.02,2.01,2,1,BL);box(.02,.04,1,1.51,.06,.5,BL);box(1,.04,.02,2.01,.06,1,BL);box(.02,.4,.02,1.72,1,1.02,BL,.3,.6);
+ cabin();
+ 
+ 
  box(.6,.22,.45,.32,.66,.225,K,.55);box(.6,.22,.45,.32,.42,.225,K,.55);box(.58,.006,.01,.32,.545,.452,0x1a100a);
  box(.64,.04,.48,.32,.79,.24,0x1a1a1a,.25);
  var ba=new THREE.Mesh(new THREE.CylinderGeometry(.17,.15,.012,32),new THREE.MeshStandardMaterial({color:0x0e0e0e,roughness:.35}));ba.scale.set(1.4,1,.8);ba.position.set(.32,.812,.25);S.add(ba);
@@ -303,6 +323,6 @@ var introOn=true;cv.addEventListener('pointerdown',function(){introOn=false});
 function intro(){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;var t0=performance.now(),a=th,b=rad,c=ph;function f(t){if(!introOn)return;var k=Math.min(1,(t-t0)/2000),e=1-Math.pow(1-k,3);th=a-1.0*(1-e);rad=b+3.2*(1-e);ph=c+.4*(1-e);draw();if(k<1)requestAnimationFrame(f)}requestAnimationFrame(f)}
 var n=0;SRC.forEach(function(s,i){var im=new Image();im.onload=function(){imgs[i]=im;if(++n==4){build();applyK();resize();draw();var l=document.getElementById('ld');l.classList.add('done');setTimeout(function(){l.style.display='none'},900);cv.classList.add('ready');intro()}};im.src=s});
 </script>
-<script>document.getElementById("br").addEventListener("input",function(){document.getElementById("brv").textContent=this.value+" %"});
+<script>document.getElementById("br").addEventListener("input",function(){document.getElementById("brv").textContent=this.value+" %"});document.getElementById("dr").addEventListener("input",function(){setDoor(this.value/100);document.getElementById("drv").textContent=this.value+" %";draw()});
 (function(){var els=document.querySelectorAll(".rv");function show(e){e.classList.add("in")}if(!("IntersectionObserver" in window)){els.forEach(show);return}var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){show(e.target);io.unobserve(e.target)}})},{threshold:.12});els.forEach(function(e){io.observe(e)})})();</script>
 </body></html>
