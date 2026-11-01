@@ -106,7 +106,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 <div class="grp"><label>Plytelių klojimas</label><div class="seg"><button id="o1" aria-pressed="true">Vertikaliai</button><button id="o2" aria-pressed="false">Horizontaliai</button></div></div>
 <div class="grp"><div class="lbl"><span>Apšvietimo ryškumas</span><b id="brv">100 %</b></div><input type="range" id="br" min="30" max="250" value="100" aria-label="Apšvietimo ryškumas"></div>
 <div class="grp"><div class="lbl"><span>Šviesos spalva</span><b id="kvv">4500 K</b></div><div class="kbar"></div><input type="range" id="kv" min="2700" max="6500" step="100" value="4500" aria-label="Šviesos temperatūra"></div>
-<div class="grp"><div class="lbl"><span>Dušo durys</span><b id="drv">0 %</b></div><input type="range" id="dr" min="0" max="100" value="0" aria-label="Dušo durų atvėrimas"></div>
+<div class="grp"><div class="lbl"><span>Dušo durys</span><b id="drv">0 %</b></div><input type="range" id="dr" min="-100" max="100" value="0" aria-label="Dušo durų atvėrimas"><div style="font-size:11px;color:var(--mut);margin-top:2px">Minusas – į kambarį, pliusas – į dušo vidų. Bakstelėkite durų stiklo, kad pereitumėte per variantus.</div></div>
 <p class="note">Grindys visose parinktyse matinės. Kampinė siena su durimis rodoma pjūvyje, durys pažymėtos plokšte.</p>
 </aside>
 </div>
@@ -235,23 +235,29 @@ function door(){
  add(.04,.04,.03,.34,1.0,.06,0x1a1a1a,.3,.6)}
 var CAB=[],DR=[],doorT=0,KD=1.309;
 function sil(){return new THREE.MeshStandardMaterial({color:0xcfd3d9,metalness:.95,roughness:.22,envMap:ENV,envMapIntensity:1.1})}
-function leaf(h){var g=new THREE.Group(),sm=sil();
+function leaf(h,di){var g=new THREE.Group(),sm=sil();
  var gl=new THREE.Mesh(new THREE.PlaneGeometry(.5,1.86),new THREE.MeshPhysicalMaterial({color:0xcfe0e8,transparent:true,opacity:.16,roughness:.05,side:THREE.DoubleSide,depthWrite:false}));
- gl.position.set(.25,.95,0);g.add(gl);CAB.push(gl);
+ gl.position.set(.25,.95,0);gl.userData.door=di;g.add(gl);CAB.push(gl);
  [[.5,.02,.025,.25,1.9,0],[.5,.03,.025,.25,.015,0],[.02,1.9,.025,0,.95,0],[.02,1.9,.025,.5,.95,0]].forEach(function(p){var m=new THREE.Mesh(new THREE.BoxGeometry(p[0],p[1],p[2]),sm);m.position.set(p[3],p[4],p[5]);m.castShadow=true;g.add(m)});
  if(h){var hd=new THREE.Mesh(new THREE.BoxGeometry(.016,.3,.016),sm);hd.position.set(.43,.95,.03);g.add(hd)}
  return g}
 function cabin(){
- [[1.51,.005,-Math.PI/2,1],[2.505,1.0,Math.PI,-1]].forEach(function(c){
-  var pA=new THREE.Group();pA.position.set(c[0],0,c[1]);pA.rotation.y=c[2];S.add(pA);pA.add(leaf(false));
-  var pB=new THREE.Group();pB.position.set(.5,0,0);pA.add(pB);pB.add(leaf(true));
-  DR.push({pA:pA,pB:pB,base:c[2],s:c[3]})});
- setDoor(doorT)}
-function setDoor(t){doorT=t;DR.forEach(function(d){d.pA.rotation.y=d.base+d.s*t*KD;d.pB.rotation.y=-2*d.s*t*KD})}
-function tweenDoor(to){var from=doorT,t0=performance.now();(function f(now){var k=Math.min(1,(now-t0)/900),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;setDoor(from+(to-from)*e);var v=Math.round(doorT*100);document.getElementById('dr').value=v;document.getElementById('drv').textContent=v+' %';draw();if(k<1)requestAnimationFrame(f)})(t0)}
+ [[1.51,.005,-Math.PI/2,1],[2.505,1.0,Math.PI,-1]].forEach(function(c,di){
+  var pA=new THREE.Group();pA.position.set(c[0],0,c[1]);pA.rotation.y=c[2];S.add(pA);pA.add(leaf(false,di));
+  var pB=new THREE.Group();pB.position.set(.5,0,0);pA.add(pB);pB.add(leaf(true,di));
+  DR.push({pA:pA,pB:pB,base:c[2],s:c[3],t:0,lo:-1,hi:1,H:[c[0],c[1]]})});
+ limits();setDoor(0)}
+function applyDoor(d,t){d.t=t;d.pA.rotation.y=d.base+d.s*t*KD;d.pB.rotation.y=-2*d.s*t*KD}
+function setDoor(u){doorT=u;DR.forEach(function(d){applyDoor(d,Math.max(d.lo,Math.min(d.hi,u)))})}
+var OBS=[[.9,1.4,0,.38],[1.09,1.45,1.78,2.36],[1.88,2.48,1.73,2.36],[0,.64,0,.46]];
+function pts(d,t){var tA=d.base+d.s*t*KD,tB=d.base-d.s*t*KD,h=d.H,a=[h[0]+.5*Math.cos(tA),h[1]-.5*Math.sin(tA)],b=[a[0]+.5*Math.cos(tB),a[1]-.5*Math.sin(tB)],o=[];for(var i=0;i<=20;i++){var k=i/20;o.push([h[0]+(a[0]-h[0])*k,h[1]+(a[1]-h[1])*k],[a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k])}return o}
+function hit(d,t){return pts(d,t).some(function(p){return OBS.some(function(b){return p[0]>b[0]-.015&&p[0]<b[1]+.015&&p[1]>b[2]-.015&&p[1]<b[3]+.015})})}
+function limits(){DR.forEach(function(d){[-1,1].forEach(function(sg){var m=0;for(var k=1;k<=100;k++){if(hit(d,sg*k/100))break;m=sg*k/100}if(sg>0)d.hi=m;else d.lo=m})})}
+function syncUI(){var a=DR[0].t,b=DR[1].t,s=document.getElementById('dr'),l=document.getElementById('drv');if(Math.abs(a-b)<.02){s.value=Math.round(a*100);l.textContent=Math.round(a*100)+' %'}else{l.textContent='skirtingos'}}
+function tweenDoor(i,to){var d=DR[i],from=d.t,tt=Math.max(d.lo,Math.min(d.hi,to)),t0=performance.now();(function f(now){var k=Math.min(1,(now-t0)/800),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;applyDoor(d,from+(tt-from)*e);draw();if(k<1)requestAnimationFrame(f);else syncUI()})(t0)}
 var dX=0,dY=0,RC=new THREE.Raycaster();
 cv.addEventListener('pointerdown',function(e){dX=e.clientX;dY=e.clientY});
-cv.addEventListener('click',function(e){if(Math.hypot(e.clientX-dX,e.clientY-dY)>6)return;var r=cv.getBoundingClientRect();RC.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1),cam);if(RC.intersectObjects(CAB).length)tweenDoor(doorT>.5?0:1)});
+cv.addEventListener('click',function(e){if(Math.hypot(e.clientX-dX,e.clientY-dY)>6)return;var r=cv.getBoundingClientRect();RC.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1),cam);var hh=RC.intersectObjects(CAB);if(hh.length){var di=hh[0].object.userData.door,dd=DR[di];tweenDoor(di,dd.t<-.05?0:(dd.t>.05?-1:1))}});
 function build(){
  ENV=envMap();
  mkMat.g=mats(true);mkMat.m=mats(false);var fl=mats(false);mkMat.f=function(i,r){return fl(i,r)};
@@ -259,15 +265,15 @@ function build(){
  var fg=new THREE.Mesh(shapeGeo(),new THREE.MeshStandardMaterial({color:0x8e8b84,roughness:.9}));fg.receiveShadow=true;S.add(fg);
  var cg=new THREE.Mesh(shapeGeo(),new THREE.MeshStandardMaterial({color:0xf4f3ef,roughness:.9,side:THREE.BackSide}));cg.position.y=H;S.add(cg);
  door();
- var K=0x5a3d2c,BL=0x111111,WH=0xf3f2ee;
+ var K=0xf1f0ec,BL=0x111111,WH=0xf3f2ee;
  box(.8,.004,.07,2.01,.004,.045,0xb9b7b0,.75);box(.8,.005,.01,2.01,.0055,.075,0x222222,.4,.5);
- cyl(.014,.38,2.01,2.05,.2,BL,0,Math.PI/2);cyl(.12,.014,2.01,2.05,.39,BL);
- box(.22,.1,.03,2.01,1.15,.016,BL,.3,.5);cyl(.012,.8,2.3,1.35,.02,BL);
+ cyl(.014,.38,2.01,2.05,.2,0xd0d3d8,0,Math.PI/2);cyl(.12,.014,2.01,2.05,.39,0xd0d3d8);
+ box(.22,.1,.03,2.01,1.15,.016,0xd0d3d8,.25,.9);cyl(.012,.8,2.3,1.35,.02,0xd0d3d8);
  var gm=new THREE.MeshPhysicalMaterial({color:0xcfe0e8,transparent:true,opacity:.16,roughness:.05,side:THREE.DoubleSide,depthWrite:false});
  cabin();
  
  
- box(.6,.22,.45,.32,.66,.225,K,.55);box(.6,.22,.45,.32,.42,.225,K,.55);box(.58,.006,.01,.32,.545,.452,0x1a100a);
+ box(.6,.22,.45,.32,.66,.225,K,.55);box(.6,.22,.45,.32,.42,.225,K,.55);box(.58,.006,.01,.32,.545,.452,0xb9b7b1);
  box(.64,.04,.48,.32,.79,.24,0x1a1a1a,.25);
  var ba=new THREE.Mesh(new THREE.CylinderGeometry(.17,.15,.012,32),new THREE.MeshStandardMaterial({color:0x0e0e0e,roughness:.35}));ba.scale.set(1.4,1,.8);ba.position.set(.32,.812,.25);S.add(ba);
  cyl(.013,.16,.32,.89,.09,BL);box(.02,.02,.1,.32,.96,.13,BL,.3,.6);
@@ -275,7 +281,7 @@ function build(){
  var rg=new THREE.Mesh(new THREE.RingGeometry(.3,.34,64),new THREE.MeshBasicMaterial({color:new THREE.Color(3,3,3),side:THREE.DoubleSide}));rg.position.set(.32,1.55,.005);S.add(rg);
  var hl=new THREE.Mesh(new THREE.RingGeometry(.34,.46,64),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.18,side:THREE.DoubleSide,depthWrite:false}));hl.position.set(.32,1.55,.003);S.add(hl);
  box(.5,1.75,.38,1.15,1.025,.19,K,.55);
- box(.46,.5,.012,1.15,.45,.386,0x68493a,.5);box(.48,.008,.014,1.15,.7,.385,0x1a100a);box(.46,1.0,.012,1.15,1.28,.386,0x62432f,.5);
+ box(.46,.5,.012,1.15,.45,.386,0xf7f6f3,.45);box(.48,.008,.014,1.15,.7,.385,0xb9b7b1);box(.46,1.0,.012,1.15,1.28,.386,0xf7f6f3,.45);
  box(.16,.012,.02,1.15,.64,.4,BL,.3,.6);box(.012,.2,.02,1.3,1.1,.4,BL,.3,.6);
  var wm=new THREE.MeshPhysicalMaterial({color:0xf4f4f2,roughness:.12,clearcoat:1,envMap:ENV,envMapIntensity:.5});
  var bw=new THREE.Mesh(new THREE.SphereGeometry(1,32,20),wm);bw.scale.set(.18,.2,.29);bw.position.set(1.27,.42,2.07);bw.castShadow=true;S.add(bw);
@@ -287,8 +293,8 @@ function build(){
   var gl=new THREE.Mesh(new THREE.CircleGeometry(.185,40),new THREE.MeshPhysicalMaterial({color:0x1b2326,roughness:.05,clearcoat:1,envMap:ENV,envMapIntensity:.8}));gl.rotation.y=Math.PI;gl.position.set(2.18,y,1.726);S.add(gl);
   box(.5,.06,.01,2.18,y+.36,1.727,0x23262a,.3)});
  var lm=new THREE.MeshBasicMaterial({color:new THREE.Color(4,4,4)});
- [[.6,.9],[1.7,.8],[1.8,1.95],[.6,1.5]].forEach(function(p,i){
-  var d=new THREE.Mesh(new THREE.CircleGeometry(.05,24),lm);d.rotation.x=Math.PI/2;d.position.set(p[0],H-.003,p[1]);S.add(d);
+ [[2.0,.5],[.55,.75],[1.2,1.3],[1.75,2.0]].forEach(function(p,i){
+  var d=new THREE.Mesh(new THREE.CircleGeometry(.085,32),lm);d.rotation.x=Math.PI/2;d.position.set(p[0],H-.003,p[1]);var tr=new THREE.Mesh(new THREE.RingGeometry(.085,.097,32),new THREE.MeshStandardMaterial({color:0xf2f2f2,roughness:.4,side:THREE.DoubleSide}));tr.rotation.x=Math.PI/2;tr.position.set(p[0],H-.003,p[1]);
   var sp=new THREE.SpotLight(0xfff0dc,.3,7,1.15,.7,1.3);sp.position.set(p[0],H-.05,p[1]);sp.target.position.set(p[0],0,p[1]);S.add(sp,sp.target);LT.push([sp,.3]);
   if(i<3){sp.castShadow=true;sp.shadow.mapSize.set(1024,1024);sp.shadow.bias=-.0004}});
  var pl=new THREE.PointLight(0xfff4e6,.45,3);pl.position.set(.32,1.55,.35);S.add(pl);LT.push([pl,.45]);
